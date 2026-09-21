@@ -9,13 +9,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check Slack webhook secret
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "ERROR: SLACK_WEBHOOK_URL secret is empty or unavailable."
+            exit 1
+          fi
+
+          echo "Slack webhook secret is available."
+
       - name: Send PR update notification to Slack
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST \
-            -H 'Content-type: application/json' \
-            --data '{
-              "text": "🔄 PR updated: ${{ github.event.pull_request.title }}\nRepository: ${{ github.repository }}\nPR: #${{ github.event.pull_request.number }}\nUpdated by: ${{ github.event.pull_request.user.login }}\nCommit: ${{ github.event.pull_request.head.sha }}"
-            }' \
+            -H "Content-Type: application/json" \
+            --data "{
+              \"text\": \"🔄 PR updated: ${{ github.event.pull_request.title }}\nRepository: ${{ github.repository }}\nPR: #${{ github.event.pull_request.number }}\nUpdated by: ${{ github.event.pull_request.user.login }}\nCommit: ${{ github.event.pull_request.head.sha }}\"
+            }" \
             "$SLACK_WEBHOOK_URL"
