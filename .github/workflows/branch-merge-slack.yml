@@ -51,7 +51,7 @@ jobs:
             }" \
             "$SLACK_WEBHOOK_URL"
 
-      - name: Send Email notification
+            - name: Send Email notification
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -69,21 +69,37 @@ jobs:
           import smtplib
           from email.message import EmailMessage
 
+          sender = os.environ["SMTP_USERNAME"]
+          recipients = [
+              email.strip()
+              for email in os.environ["STAKEHOLDER_EMAILS"].split(",")
+              if email.strip()
+          ]
+
           msg = EmailMessage()
+          msg["Subject"] = "GitHub Merge Notification - main"
+          msg["From"] = sender
+          msg["To"] = ", ".join(recipients)
 
-          msg["Subject"] = "GitHub: Branch merged into main"
-          msg["From"] = os.environ["SMTP_USERNAME"]
-          msg["To"] = os.environ["STAKEHOLDER_EMAILS"]
+          body = f"""
+          GitHub Branch Merge Notification
 
-          msg.set_content(f"""
-          A branch has been merged into main.
+          A branch has been successfully merged into the main branch.
 
           Repository: {os.environ["REPOSITORY"]}
-          PR: #{os.environ["PR_NUMBER"]}
-          Title: {os.environ["PR_TITLE"]}
-          Source branch: {os.environ["SOURCE_BRANCH"]}
-          Merged by: {os.environ["MERGED_BY"]}
-          """)
+          Pull Request: #{os.environ["PR_NUMBER"]}
+          PR Title: {os.environ["PR_TITLE"]}
+          Source Branch: {os.environ["SOURCE_BRANCH"]}
+          Merged By: {os.environ["MERGED_BY"]}
+
+          This notification was generated automatically by GitHub Actions.
+          """
+
+          msg.set_content(body)
+
+          print("Sender:", sender)
+          print("Recipients:", recipients)
+          print("Connecting to SMTP server...")
 
           with smtplib.SMTP(
               os.environ["SMTP_HOST"],
@@ -91,10 +107,14 @@ jobs:
           ) as smtp:
               smtp.starttls()
               smtp.login(
-                  os.environ["SMTP_USERNAME"],
+                  sender,
                   os.environ["SMTP_PASSWORD"]
               )
-              smtp.send_message(msg)
 
-          print("Email notification sent successfully.")
+              print("SMTP authentication successful.")
+
+              result = smtp.send_message(msg)
+
+              print("SMTP send result:", result)
+              print("Email notification sent successfully.")
           PY
