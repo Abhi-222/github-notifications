@@ -1,0 +1,21 @@
+name: PR Update Slack Notification
+
+on:
+  pull_request:
+    types: [synchronize]
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send PR update notification to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST \
+            -H 'Content-type: application/json' \
+            --data '{
+              "text": "🔄 PR updated: ${{ github.event.pull_request.title }}\nRepository: ${{ github.repository }}\nPR: #${{ github.event.pull_request.number }}\nUpdated by: ${{ github.event.pull_request.user.login }}\nCommit: ${{ github.event.pull_request.head.sha }}"
+            }' \
+            "$SLACK_WEBHOOK_URL"
