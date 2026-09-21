@@ -56,9 +56,12 @@ jobs:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           STAKEHOLDER_EMAILS: ${{ secrets.STAKEHOLDER_EMAILS }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          python3 -m pip install --quiet secure-smtplib
-
           python3 <<'PY'
           import os
           import smtplib
@@ -70,19 +73,26 @@ jobs:
           msg["From"] = os.environ["SMTP_USERNAME"]
           msg["To"] = os.environ["STAKEHOLDER_EMAILS"]
 
-          msg.set_content(
-              f"""A branch has been merged into main.
+          msg.set_content(f"""
+          A branch has been merged into main.
 
-          Repository: {os.environ.get("GITHUB_REPOSITORY")}
-          PR: #{os.environ.get("PR_NUMBER", "")}
-          """
-          )
+          Repository: {os.environ["REPOSITORY"]}
+          PR: #{os.environ["PR_NUMBER"]}
+          Title: {os.environ["PR_TITLE"]}
+          Source branch: {os.environ["SOURCE_BRANCH"]}
+          Merged by: {os.environ["MERGED_BY"]}
+          """)
 
-          with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"])) as smtp:
+          with smtplib.SMTP(
+              os.environ["SMTP_HOST"],
+              int(os.environ["SMTP_PORT"])
+          ) as smtp:
               smtp.starttls()
               smtp.login(
                   os.environ["SMTP_USERNAME"],
                   os.environ["SMTP_PASSWORD"]
               )
               smtp.send_message(msg)
+
+          print("Email notification sent successfully.")
           PY
